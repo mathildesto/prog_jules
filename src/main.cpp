@@ -2,27 +2,71 @@
 #include "p6/p6.h"
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest/doctest.h"
+#include<vector>
 
 struct circle{
-    float x_position;
-    float y_position;
+    float x, y;
+    //std::vector<float> pos;
+    // std::vector<float> vel;
+    // std::vector<float> acc;
 
-    circle(float x, float y){
-        x_position = x;
-        y_position = y;
-    }
+    // circle(); //default constructor
 
-    circle() : x_position(0), y_position(0) {}
+    // circle(std::vector<float> pos){
+    //     pos = pos;
+    //     // vel = vel;
+    //     // acc = acc;
+    //         }
+
+    circle() : x(p6::random::number(-1, 1)), y(p6::random::number(-1, 1)) {}
+    circle(float x, float y) : x(x), y(y) {}
 
     void update_position(){
-         x_position += -0.01;
-         y_position += -0.01;
-    }
-
-    void vitesse(){
-            // a remplir
+         x += p6::random::number(-0.01, 0.01);
+         y += p6::random::number(-0.01, 0.01);
     }
 };
+
+std::vector<circle> initialise_positions(int n){
+// procedure puts all the boids at a starting position. I put them all at random 
+// locations off-screen to start with, that way when the simulation starts they all 
+// fly in towards the middle of the screen, rather than suddenly appearing in mid-air.
+
+    std::vector<circle> boids(n);
+
+    for (int i = 0; i<n ; i++){
+        boids[i] = circle();
+    }
+
+    return boids;
+}
+
+// void move_all_boids_to_new_positions(std::vector<circle> boids, int n){
+//     for (int i = 0; i<n ; i++){
+//     boids[i].update_position();
+// };
+// }
+
+void draw_boids(std::vector<circle> boids, int n){
+        // Actual app
+    auto ctx = p6::Context{{.title = "Simple-p6-Setup"}};
+    ctx.maximize_window();
+
+    // Declare your infinite update loop.
+    ctx.update = [&]() {
+        ctx.background(p6::NamedColor::AppleGreen);
+
+        for (int i = 0; i<n ; i++){
+        ctx.circle({boids[i].x, boids[i].y},
+        p6::Radius{0.2f}
+        );
+        boids[i].update_position();
+    }
+    };
+        // Should be done last. It starts the infinite loop.
+    ctx.start();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -35,38 +79,15 @@ int main(int argc, char* argv[])
             return EXIT_SUCCESS;
     }
 
-    // Actual app
-    auto ctx = p6::Context{{.title = "Simple-p6-Setup"}};
-    ctx.maximize_window();
+    int n = 10; //nombre de boids
+    float separationCoef = 0.2;
+    float alignCoef = 0.5;
+    float cohesionCoef = 0.5;
 
-    circle circle1(-1, 0.5);
+    float maxSpeed = 5; 
+    float maxForce = 1;
 
-    // Declare your infinite update loop.
-    ctx.update = [&]() {
-        ctx.background(p6::NamedColor::AppleGreen);
-        ctx.circle({-0.5f, 0.5f},
-            //p6::Center{ctx.mouse()},
-            p6::Radius{0.2f}
-        );
+    std::vector<circle> boids = initialise_positions(n);
+    draw_boids(boids,10);
 
-
-        ctx.circle({circle1.x_position, circle1.y_position},
-        p6::Radius{0.2f}
-        );
-        circle1.update_position();
-
-        // ctx.circle({p6::random::number(-ctx.aspect_ratio(), ctx.aspect_ratio()), p6::random::number(-1.f, 1.f)},
-        // p6::Radius{0.2f}
-        // );
-
-                // ctx.circle({p6::random::number(-ctx.aspect_ratio(), ctx.aspect_ratio()), p6::random::number(-1.f, 1.f)},
-        // p6::Radius{0.2f}
-        // );
-    };
-
-    // SALUUUUUUUT ANAST
-    // SALUUUUUUUT MATHILDE
-
-    // Should be done last. It starts the infinite loop.
-    ctx.start();
 }
