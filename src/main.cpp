@@ -8,7 +8,7 @@
 struct circle{
     float x, y; //position 
 
-    float dx, dy; //velocity
+    float vx, vy; //velocity
 
     circle() : x(p6::random::number(-1, 1)), y(p6::random::number(-1, 1)) {}
     circle(float x, float y) : x(x), y(y) {}
@@ -34,99 +34,133 @@ struct circle{
     return boids;
 }
 
-void update_position(std::vector<circle>& boids, int n, const float WINDOW_MIN_X, const float WINDOW_MAX_X, const float WINDOW_MIN_Y, const float WINDOW_MAX_Y){
+void update_position(std::vector<circle>& boids, int n, const float WINDOW_MIN_X, const float WINDOW_MAX_X, const float WINDOW_MIN_Y, const float WINDOW_MAX_Y, float turnfactor, float visual_range,float protectedRange,float centeringfactor,float avoidfactor,float matchingfactor,float maxspeed,float minspeed){
     
-    // check if the boid is outside the window boundaries
-    for(int i = 0; i<n ; i++){
-    if (boids[i].x < WINDOW_MIN_X) {
-        boids[i].x = WINDOW_MIN_X;
-        boids[i].dx *= -1 ; // reverse the x-component of the velocity
-    }
-    else if (boids[i].x > WINDOW_MAX_X) {
-        boids[i].x = WINDOW_MAX_X;
-        boids[i].dx *= -1;
-    }
-    if (boids[i].y < WINDOW_MIN_Y) {
-        boids[i].y = WINDOW_MIN_Y;
-        boids[i].dy *= -1;
-    }
-    else if (boids[i].y > WINDOW_MAX_Y) {
-        boids[i].y = WINDOW_MAX_Y;
-        boids[i].dy *= -1;
-    }
-    }
-
-    //rule 1 : Boids try to fly towards the centre of mass of neighbouring boids.
-    float Sx = 0;
-    float Sy = 0;
-
-    for(int i = 0; i<n ; i++){
-       Sx += boids[i].x;
-       Sy += boids[i].y;
-    }
-    float Xm = Sx/n;
-    float Ym = Sy/n; //vector that contains the x and y coordinates of the center of mass
-
+    // for each boid
     for(int i = 0; i<n ; i++){
 
-            boids[i].dx += (Xm - boids[i].x)/1000; // move the boids 0,1% of the way towards the centre
-            boids[i].dy += (Ym - boids[i].y)/1000;  
-    }
+        float xpos_avg = 0;
+        float ypos_avg= 0;
+        float xvel_avg= 0;
+        float yvel_avg= 0;
+        float neighboring_boids= 0;
+        float close_dx= 0;
+        float close_dy= 0;
+        
+        // for each other boid
+        for(int j = 0; j<n ; j++){
+            
+            if (j != i ){
 
+                //Compute differences in x and y coordinates
+                float dx = boids[i].x - boids[j].x;
+                float dy = boids[i].y - boids[j].y;
 
-    //rule 2 : Boids try to keep a small distance away from other objects (including other boids)
+                //Are both those differences less than the visual range?
+                if (abs(dx)<visual_range && abs(dy)<visual_range){
+                
+                    // If so, calculate the squared distance
+                    float squared_distance = dx*dx + dy*dy;
+                
+                    //Is squared distance less than the protected range?
+                    if (squared_distance < pow(protectedRange,2)){
 
-    for(int i = 0; i<n ; i++){
-        for(int j = i+1; j<n ; j++)
-            if (distance(boids[i],boids[j])<0.2){
-                boids[i].dx -= abs(boids[i].x - boids[j].x);
-                boids[i].dy -= abs(boids[i].y - boids[j].y); 
+                        //If so, calculate difference in x/y-coordinates to nearfield boid
+                        close_dx += boids[i].x - boids[j].x; 
+                        close_dy += boids[i].y - boids[j].y;
+                    }
+
+                    //If not in protected range, is the boid in the visual range?
+                    else if (squared_distance < pow(visual_range,2)){
+
+                        //Add other boid's x/y-coord and x/y vel to accumulator variables
+                        xpos_avg += boids[j].x ;
+                        ypos_avg += boids[j].y ;
+                        xvel_avg += boids[j].vx;
+                        yvel_avg += boids[j].vy;
+
+                    //Increment number of boids within visual range
+                        neighboring_boids += 1; 
+                    }
+                }
             }
         }
 
+        //If there were any boids in the visual range . . .            
+        if (neighboring_boids > 0){ 
 
-    // rule 3 Boids try to match velocity with near boids.
+            //Divide accumulator variables by number of boids in visual range
+            xpos_avg = xpos_avg/neighboring_boids; 
+            ypos_avg = ypos_avg/neighboring_boids;
+            xvel_avg = xvel_avg/neighboring_boids;
+            yvel_avg = yvel_avg/neighboring_boids;
 
-        float Vx = 0;
-        float Vy = 0;
-        for(int i = 0; i<n ; i++){
-        Vx += boids[i].dx;
-        Vy += boids[i].dy;
+            // ############ RULE 1 & 2 : COHESION and ALIGNEMENT #######################
+            boids[i].vx = (boids[i].vx + 
+                   (xpos_avg - boids[i].x)*centeringfactor + 
+                   (xvel_avg - boids[i].vx)*matchingfactor); //Add the centering/matching contributions to velocity
+
+            boids[i].vy = (boids[i].vy + 
+                   (ypos_avg - boids[i].y)*centeringfactor + 
+                   (yvel_avg - boids[i].vy)*matchingfactor);
         }
 
-        Vx/=n;
-        Vy/=n; // x and y coordinates of the center of mass
+        // ################ RULE 3 : SEPARATION ####################
+        boids[i].vx = boids[i].vx + (close_dx*avoidfactor); // Add the avoidance contribution to velocity
+        boids[i].vy = boids[i].vy + (close_dy*avoidfactor);
 
-        for(int i = 0; i<n ; i++){
-
-                boids[i].dx += (Vx - boids[i].dx)/8; // move the boids 0,1% of the way towards the centre
-                boids[i].dy += (Vy - boids[i].dy)/8;  
+        
+        // ################# RULE 4 : check if the boid is outside the window boundaries ########################
+        if (boids[i].x < WINDOW_MIN_X) {
+            boids[i].vx += turnfactor ; // reverse the x-component of the velocity
+        }
+        else if (boids[i].x > WINDOW_MAX_X) {
+            boids[i].vx += -turnfactor;
+        }
+        if (boids[i].y < WINDOW_MIN_Y) {
+            boids[i].vy += turnfactor;
+        }
+        else if (boids[i].y > WINDOW_MAX_Y) {
+            boids[i].vy += -turnfactor;
         }
 
+    // ############ CHECK SPEED ####################
+    float speed = sqrt(boids[i].vx*boids[i].vx + boids[i].vy*boids[i].vy);
 
-    //move_all_boids_to_new_positions
-        for(int i = 0; i<n ; i++){
-
-            boids[i].x += boids[i].dx  ;
-            boids[i].y += boids[i].dy  ; 
-
-            boids[i].dx = 0; 
-            boids[i].dy = 0;
+    //Enforce min and max speeds
+    if (speed < minspeed){
+        boids[i].vx = (boids[i].vx/speed)*minspeed;
+        boids[i].vy = (boids[i].vy/speed)*minspeed;
+    }
+    if (speed > maxspeed){
+        boids[i].vx = (boids[i].vx/speed)*maxspeed;
+        boids[i].vy = (boids[i].vy/speed)*maxspeed;
     }
 
+    //Update boid's position
+    boids[i].x = boids[i].x + boids[i].vx;
+    boids[i].y = boids[i].y + boids[i].vy;  
     }
-
- 
+}
 
 void draw_boids(std::vector<circle> & boids, int n){
         // Actual app
     auto ctx = p6::Context{{.title = "Simple-p6-Setup"}};
     //ctx.maximize_window();
 
-    const float WINDOW_MIN_X = -ctx.aspect_ratio();
-    const float WINDOW_MAX_X = ctx.aspect_ratio();
-    const float WINDOW_MIN_Y = -1;
-    const float WINDOW_MAX_Y = 1;
+    const float WINDOW_MIN_X = -ctx.aspect_ratio() + 0.1;
+    const float WINDOW_MAX_X = ctx.aspect_ratio() - 0.1;
+    const float WINDOW_MIN_Y = -0.9;
+    const float WINDOW_MAX_Y = 0.9;
+
+    float turnfactor = 0.005 ; 
+    float visualRange = 0.8 ; 
+    float protectedRange = 0.05 ; 
+    float centeringfactor = 0.0005;
+    float avoidfactor =  0.05;
+    float matchingfactor = 0.05;
+    float maxspeed = 0.02;
+    float minspeed = 0.009;
 
     // Declare your infinite update loop.
     ctx.update = [&]() {
@@ -134,10 +168,10 @@ void draw_boids(std::vector<circle> & boids, int n){
 
         for (int i = 0; i<n ; i++){
         ctx.circle({boids[i].x, boids[i].y},
-        p6::Radius{0.05f}
+        p6::Radius{0.02f}
         );
     }
-    update_position(boids, n, WINDOW_MIN_X, WINDOW_MAX_X, WINDOW_MIN_Y, WINDOW_MAX_Y);
+    update_position(boids, n, WINDOW_MIN_X, WINDOW_MAX_X, WINDOW_MIN_Y, WINDOW_MAX_Y, turnfactor, visualRange, protectedRange, centeringfactor, avoidfactor, matchingfactor, maxspeed, minspeed);
     };
         // Should be done last. It starts the infinite loop.
     ctx.start();
@@ -155,15 +189,7 @@ int main(int argc, char* argv[])
             return EXIT_SUCCESS;
     }
 
-    int n = 10; //nombre de boids
-    float separationCoef = 0.2;
-    float alignCoef = 0.5;
-    float cohesionCoef = 0.5;
-
-    float maxSpeed = 5; 
-    float maxForce = 1;
-
-
+    int n = 200; //nombre de boids
     std::vector<circle> boids = initialise_positions(n);
     draw_boids(boids, n);
 
