@@ -155,7 +155,7 @@ void draw_boids(std::vector<circle> & boids, int n){
 
     float turnfactor = 0.005 ; 
     float visualRange = 0.8 ; 
-    float protectedRange = 0.05 ; 
+    float protectedRange = 0.2 ; 
     float centeringfactor = 0.0005;
     float avoidfactor =  0.05;
     float matchingfactor = 0.05;
@@ -164,11 +164,11 @@ void draw_boids(std::vector<circle> & boids, int n){
 
     // Declare your infinite update loop.
     ctx.update = [&]() {
-        ctx.background(p6::NamedColor::AppleGreen);
+        ctx.background(p6::NamedColor::Pink);
 
         for (int i = 0; i<n ; i++){
         ctx.circle({boids[i].x, boids[i].y},
-        p6::Radius{0.02f}
+        p6::Radius{0.08f}
         );
     }
     update_position(boids, n, WINDOW_MIN_X, WINDOW_MAX_X, WINDOW_MIN_Y, WINDOW_MAX_Y, turnfactor, visualRange, protectedRange, centeringfactor, avoidfactor, matchingfactor, maxspeed, minspeed);
@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
             return EXIT_SUCCESS;
     }
 
-    int n = 200; //nombre de boids
+    int n = 10; //nombre de boids
     std::vector<circle> boids = initialise_positions(n);
     draw_boids(boids, n);
 
