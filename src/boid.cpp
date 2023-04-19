@@ -1,66 +1,66 @@
 #include "p6/p6.h"
 #include "boid.hpp"
 
-float compute_distance(const boid boid1, const boid boid2 ){
+float compute_distance(const Boid boid1, const Boid boid2 ){
         //distance = sqrt((x2 - x1)² + (y2 - y1)²)
-        return sqrt(pow(boid2.x - boid1.x,2) + pow(boid2.y - boid1.y,2));
+        return sqrt(pow(boid2.position[0] - boid1.position[0],2) + pow(boid2.position[1] - boid1.position[1],2));
     };
 
-void check_boundaries(param_boids &param, Window &window, boid &boid){
-    if (boid.x < window.WINDOW_MIN_X) {
-        boid.vx += param.turnfactor ; // reverse the x-component of the velocity
+void keep_inside_boundaries(ParamBoids &param, Window &window, Boid &boid){
+    if (boid.position[0] < window.WINDOW_MIN_X) {
+        boid.velocity[0] += param.turnfactor ; // reverse the x-component of the velocity
     }
-    else if (boid.x > window.WINDOW_MAX_X) {
-        boid.vx += -param.turnfactor;
+    else if (boid.position[0] > window.WINDOW_MAX_X) {
+        boid.velocity[0] += -param.turnfactor;
     }
-    if (boid.y < window.WINDOW_MIN_Y) {
-        boid.vy += param.turnfactor;
+    if (boid.position[1] < window.WINDOW_MIN_Y) {
+        boid.velocity[1] += param.turnfactor;
     }
-    else if (boid.y > window.WINDOW_MAX_Y) {
-        boid.vy += -param.turnfactor;
+    else if (boid.position[1] > window.WINDOW_MAX_Y) {
+        boid.velocity[1] += -param.turnfactor;
     }
 }
 
-void check_speed(param_boids &param, Window &window, boid &boid){
+void limit_speed(ParamBoids &param, Boid &boid){
 
-    float speed = sqrt(boid.vx*boid.vx + boid.vy*boid.vy);
+    float speed = sqrt(boid.velocity[0]*boid.velocity[0] + boid.velocity[1]*boid.velocity[1]);
 
     if (speed < param.minspeed){
-        boid.vx = (boid.vx/speed)*param.minspeed;
-        boid.vy = (boid.vy/speed)*param.minspeed;
+        boid.velocity[0] = (boid.velocity[0]/speed)*param.minspeed;
+        boid.velocity[1] = (boid.velocity[1]/speed)*param.minspeed;
     }
     if (speed > param.maxspeed){
-        boid.vx = (boid.vx/speed)*param.maxspeed;
-        boid.vy = (boid.vy/speed)*param.maxspeed;
+        boid.velocity[0] = (boid.velocity[0]/speed)*param.maxspeed;
+        boid.velocity[1] = (boid.velocity[1]/speed)*param.maxspeed;
     }
 }
 
-void separation(std::vector<boid>& boids, param_boids &param, Window &window, boid &boid){
+void separation(std::vector<Boid>& boids, ParamBoids &param, Boid &boid){
     float close_dx= 0;
     float close_dy= 0;
 
     for(int j = 0; j<boids.size() ; j++){
 
-        if (boid != boids[j] ){
+        if (boid == boids[j] )
+            continue;
 
-            float distance = compute_distance(boid, boids[j]);
-        
-            //Is squared distance less than the protected range?
-            if (distance < param.protectedRange){
+        float distance = compute_distance(boid, boids[j]);
+    
+        //Is squared distance less than the protected range?
+        if (distance < param.protectedRange){
 
-                //If so, calculate difference in x/y-coordinates to nearfield boid
-                close_dx += boid.x - boids[j].x; 
-                close_dy += boid.y - boids[j].y;
-            }
+            //If so, calculate difference in x/y-coordinates to nearfield boid
+            close_dx += boid.position[0] - boids[j].position[0]; 
+            close_dy += boid.position[1] - boids[j].position[1];
         }
     }
 
-    boid.vx = boid.vx + (close_dx*param.avoidfactor); // Add the avoidance contribution to velocity
-    boid.vy = boid.vy + (close_dy*param.avoidfactor);
+    boid.velocity[0] += (close_dx*param.avoidfactor); // Add the avoidance contribution to velocity
+    boid.velocity[1] += (close_dy*param.avoidfactor);
 
 }
 
-void cohesion(std::vector<boid>& boids, param_boids &param, Window &window, boid &boid){
+void cohesion(std::vector<Boid>& boids, ParamBoids &param, Boid &boid){
 
     float xvel_avg= 0;
     float yvel_avg= 0;
@@ -68,22 +68,22 @@ void cohesion(std::vector<boid>& boids, param_boids &param, Window &window, boid
 
     for(int j = 0; j<boids.size() ; j++){
 
-        if (boid != boids[j] ){
+        if (boid == boids[j] )
+            continue;
 
-            float distance = compute_distance(boid, boids[j]);
-        
-            //Is squared distance less than the visual range?
-            if (distance < param.visualRange){
+        float distance = compute_distance(boid, boids[j]);
 
-                    //Add other boid's x/y-coord and x/y vel to accumulator variables
-                    xvel_avg += boids[j].vx;
-                    yvel_avg += boids[j].vy;
+        //Is squared distance less than the visual range?
+        if (distance < param.visualRange){
 
-                //Increment number of boids within visual range
-                    neighboring_boids += 1; 
-                }
-            }
+            //Add other boid's x/y-coord and x/y vel to accumulator variables
+            xvel_avg += boids[j].velocity[0];
+            yvel_avg += boids[j].velocity[1];
+
+            //Increment number of boids within visual range
+            neighboring_boids += 1; 
         }
+    }
 
     //If there were any boids in the visual range . . .            
     if (neighboring_boids > 0){ 
@@ -92,35 +92,35 @@ void cohesion(std::vector<boid>& boids, param_boids &param, Window &window, boid
         xvel_avg = xvel_avg/neighboring_boids;
         yvel_avg = yvel_avg/neighboring_boids;
 
-        boid.vx = boid.vx + (xvel_avg - boid.vx)*param.matchingfactor; //Add the centering/matching contributions to velocity
-        boid.vy = boid.vy  + (yvel_avg - boid.vy)*param.matchingfactor;
+        boid.velocity[0] = boid.velocity[0] + (xvel_avg - boid.velocity[0])*param.matchingfactor; //Add the centering/matching contributions to velocity
+        boid.velocity[1] = boid.velocity[1]  + (yvel_avg - boid.velocity[1])*param.matchingfactor;
     }
 }
 
-void alignment(std::vector<boid>& boids, param_boids &param, Window &window, boid &boid){
+void alignment(std::vector<Boid>& boids, ParamBoids &param, Boid &boid){
 
     float xpos_avg = 0;
     float ypos_avg= 0;
     float neighboring_boids= 0;
 
-    for(int j = 0; j<boids.size() ; j++){
+    for(int j = 0; j < boids.size() ; j++){
 
-        if (boid != boids[j] ){
+        if (boid == boids[j] )
+            continue;
 
-            float distance = compute_distance(boid, boids[j]);
-        
-            //Is squared distance less than the protected range?
-            if (distance < param.visualRange){
+        float distance = compute_distance(boid, boids[j]);
+    
+        //Is squared distance less than the protected range?
+        if (distance < param.visualRange){
 
-                //Add other boid's x/y-coord and x/y vel to accumulator variables
-                xpos_avg += boids[j].x ;
-                ypos_avg += boids[j].y ;
+            //Add other boid's x/y-coord and x/y vel to accumulator variables
+            xpos_avg += boids[j].position[0] ;
+            ypos_avg += boids[j].position[1] ;
 
-            //Increment number of boids within visual range
-                neighboring_boids += 1; 
-            }
+        //Increment number of boids within visual range
+            neighboring_boids += 1; 
+        }
     }
-}
 
     //If there were any boids in the visual range . . .            
     if (neighboring_boids > 0){ 
@@ -129,138 +129,49 @@ void alignment(std::vector<boid>& boids, param_boids &param, Window &window, boi
         xpos_avg = xpos_avg/neighboring_boids; 
         ypos_avg = ypos_avg/neighboring_boids;
 
-        boid.vx = boid.vx + (xpos_avg - boid.x)*param.centeringfactor; //Add the centering/matching contributions to velocity
-        boid.vy = boid.vy + (ypos_avg - boid.y)*param.centeringfactor;
+        boid.velocity[0] += (xpos_avg - boid.position[0])*param.centeringfactor; //Add the centering/matching contributions to velocity
+        boid.velocity[1] += (ypos_avg - boid.position[1])*param.centeringfactor;
     }
 }
 
 
-std::vector<boid> initialise_positions(int n){
+std::vector<Boid> initialise_positions(int n){
     // Adds all the boids at a starting position. I put them all at random locations
 
-    std::vector<boid> boids(n);
-    for (int i = 0; i<n ; i++){
-        boids[i] = boid();
+    std::vector<Boid> boids(n);
+    for (auto& boid : boids){
+        boid = Boid();
     }
     return boids;
 }
 
-void update_position(std::vector<boid>& boids, int n, Window window, param_boids &param){
+void update_position(std::vector<Boid>& boids, Window window, ParamBoids &param){
     
     // for each boid
-    for(int i = 0; i<n ; i++){
+    for (auto& boid : boids){
 
-        alignment(boids, param, window, boids[i]);
+        alignment(boids, param, boid);
         
-        cohesion (boids, param, window, boids[i]);
+        cohesion (boids, param, boid);
 
-        separation(boids, param, window, boids[i]);
+        separation(boids, param, boid);
 
-        check_boundaries(param, window, boids[i]);
+        keep_inside_boundaries(param, window, boid);
 
-        check_speed(param, window, boids[i]);
+        limit_speed(param, boid);
 
     //Update boid's position
-        boids[i].x += boids[i].vx;
-        boids[i].y += boids[i].vy;  
+        // boid.position[0] += boid.velocity[0];
+        // boid.position[1] += boid.velocity[1];
+
+        boid.add_velocity();
     }
 }
 
+void draw_boids(const std::vector<Boid>& boids, p6::Context& ctx, const ParamBoids& param) {
 
-void draw_boids(std::vector<boid> & boids, int n, p6::Context& ctx, param_boids &param){
-        
-        for (int i = 0; i<n ; i++){
-        ctx.circle({boids[i].x, boids[i].y},
-        p6::Radius{param.boidSize}
-        );
+    for (const auto& boid : boids)
+    {
+        ctx.circle({float(boid.position[0]), float(boid.position[1])}, p6::Radius{param.boidSize});
     }
 }
-
-
-// void update_position(std::vector<boid>& boids, int n, Window window, param_boids &param){
-    
-//     // for each boid
-//     for(int i = 0; i<n ; i++){
-
-//         float xpos_avg = 0;
-//         float ypos_avg= 0;
-//         float xvel_avg= 0;
-//         float yvel_avg= 0;
-//         float neighboring_boids= 0;
-//         float close_dx= 0;
-//         float close_dy= 0;
-        
-//         // for each other boid
-//         for(int j = 0; j<n ; j++){
-            
-//             if (j != i ){
-
-//                 //Compute differences in x and y coordinates
-//                 float dx = boids[i].x - boids[j].x;
-//                 float dy = boids[i].y - boids[j].y;
-
-//                 //Are both those differences less than the visual range?
-//                 if (abs(dx)<param.visualRange && abs(dy)<param.visualRange){
-                
-//                     // If so, calculate the squared distance
-//                     float squared_distance = dx*dx + dy*dy;
-                
-//                     //Is squared distance less than the protected range?
-//                     if (squared_distance < pow(param.protectedRange,2)){
-
-//                         //If so, calculate difference in x/y-coordinates to nearfield boid
-//                         close_dx += boids[i].x - boids[j].x; 
-//                         close_dy += boids[i].y - boids[j].y;
-//                     }
-
-//                     //If not in protected range, is the boid in the visual range?
-//                     else if (squared_distance < pow(param.visualRange,2)){
-
-//                         //Add other boid's x/y-coord and x/y vel to accumulator variables
-//                         xpos_avg += boids[j].x ;
-//                         ypos_avg += boids[j].y ;
-//                         xvel_avg += boids[j].vx;
-//                         yvel_avg += boids[j].vy;
-
-//                     //Increment number of boids within visual range
-//                         neighboring_boids += 1; 
-//                     }
-//                 }
-//             }
-//         }
-
-//         //If there were any boids in the visual range . . .            
-//         if (neighboring_boids > 0){ 
-
-//             //Divide accumulator variables by number of boids in visual range
-//             xpos_avg = xpos_avg/neighboring_boids; 
-//             ypos_avg = ypos_avg/neighboring_boids;
-//             xvel_avg = xvel_avg/neighboring_boids;
-//             yvel_avg = yvel_avg/neighboring_boids;
-
-//             // ############ RULE 1 & 2 : COHESION and ALIGNEMENT #######################
-//             boids[i].vx = (boids[i].vx + 
-//                    (xpos_avg - boids[i].x)*param.centeringfactor + 
-//                    (xvel_avg - boids[i].vx)*param.matchingfactor); //Add the centering/matching contributions to velocity
-
-//             boids[i].vy = (boids[i].vy + 
-//                    (ypos_avg - boids[i].y)*param.centeringfactor + 
-//                    (yvel_avg - boids[i].vy)*param.matchingfactor);
-//         }
-
-//         // ################ RULE 3 : SEPARATION ####################
-//         boids[i].vx = boids[i].vx + (close_dx*param.avoidfactor); // Add the avoidance contribution to velocity
-//         boids[i].vy = boids[i].vy + (close_dy*param.avoidfactor);
-
-        
-//         // ################# RULE 4 : check if the boid is outside the window boundaries ########################
-//         check_boundaries(param, window, boids[i]);
-
-//         // ############ CHECK SPEED ####################
-//         check_speed(param, window, boids[i]);
-
-//     //Update boid's position
-//     boids[i].x += boids[i].vx;
-//     boids[i].y += boids[i].vy;  
-//     }
-// }

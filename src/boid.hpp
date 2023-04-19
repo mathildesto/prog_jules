@@ -1,25 +1,35 @@
 #pragma once
 #include "p6/p6.h"
 
-struct boid{
-    float x, y; //position 
-
-    float vx, vy; //velocity
+struct Boid{
 
     float size;
+    std::vector<double> position;
+    std::vector<double> velocity;
 
-    boid() : x(p6::random::number(-1, 1)), y(p6::random::number(-1, 1)), size(0.02f) {}
-
-    bool operator !=(boid &boid) const{
-        if (x!=boid.x and y!=boid.y){
-            return true;
-        }
+    Boid() {
+    position = { p6::random::number(-1, 1), p6::random::number(-1, 1) };
+    velocity = { 0, 0 };
     }
 
+    Boid(double x, double y, double vx, double vy) {
+        position = { x, y };
+        velocity = { vx, vy };
+    }
+
+    bool operator ==(const Boid &boid) const {
+        return position == boid.position && velocity == boid.velocity;
+    }
+
+    void add_velocity(){
+        position[0] += velocity[0];
+        position[1] += velocity[1];
+    }
 };
 
 
-struct param_boids{
+struct ParamBoids{
+    int numberOfBoids = 50;
 
     float boidSize = 0.02f;
 
@@ -46,15 +56,20 @@ struct Window {
     const float WINDOW_MAX_Y = 0.8;
 };
 
-float distance(const boid boid1, const boid boid2 );
+float distance(const Boid boid1, const Boid boid2 );
 
-std::vector<boid> initialise_positions(int n);
+std::vector<Boid> initialise_positions(int n);
 
-void check_boundaries(param_boids &param, Window &window, boid &boid);
 
-void update_position(std::vector<boid>& boids, int n, Window window, param_boids &param);
+void keep_inside_boundaries(ParamBoids &param, Window &window, Boid &boid);
+void limit_speed(ParamBoids &param, Boid &boid);
+void separation(std::vector<Boid>& boids, ParamBoids &param, Boid &boid);
+void cohesion(std::vector<Boid>& boids, ParamBoids &param, Boid &boid);
+void alignment(std::vector<Boid>& boids, ParamBoids &param, Boid &boid);
 
-void draw_boids(std::vector<boid> & boids, int n, p6::Context& ctx, param_boids &param);
+void update_position(std::vector<Boid>& boids, Window window, ParamBoids &param);
+
+void draw_boids(const std::vector<Boid>& boids, p6::Context& ctx, const ParamBoids& param);
 
 
 

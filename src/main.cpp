@@ -7,6 +7,36 @@
 #include<vector>
 #include<boid.hpp>
 
+static void render_gui(ParamBoids& param){
+
+        ImGui::SliderInt("numberOfBoids", &param.numberOfBoids, 2, 100);
+
+        ImGui::SliderFloat("visualRange", &param.visualRange, 0.f, 2.0f);
+        ImGui::SliderFloat("ProtectedRange", &param.protectedRange, 0.f, 0.5f);
+
+        ImGui::SliderFloat("turnfactor", &param.turnfactor, 0.f, 0.1f);
+        ImGui::SliderFloat("centeringfactor", &param.centeringfactor, 0.f, 0.001f);
+        ImGui::SliderFloat("avoidfactor", &param.avoidfactor, 0.f, 0.1f);
+        ImGui::SliderFloat("matchingfactor", &param.matchingfactor, 0.f, 0.1f);
+
+        ImGui::SliderFloat("MaxSpeed", &param.maxspeed, 0.f, 0.05f);
+        ImGui::SliderFloat("MinSpeed", &param.minspeed, 0.f, 0.05f);
+
+        ImGui::SliderFloat("Size", &param.boidSize, 0.f, 0.1f);
+}
+
+void resize(ParamBoids& param, std::vector<Boid> & boids){
+    int dif = static_cast<int>(boids.size()) - param.numberOfBoids;
+    if (dif < 0) {
+        for (int i = 0; i < -dif; i++) {
+            boids.push_back(Boid());
+        }
+    } else if (dif > 0) {
+        for (int i = 0; i < dif; i++) {
+            boids.pop_back();
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -19,46 +49,14 @@ int main(int argc, char* argv[])
             return EXIT_SUCCESS;
     }
     
-    int n = 100; //nombre de boids
-    param_boids param1;
-    param_boids param2;
-
-    std::vector<boid> boids1 = initialise_positions(n);
-    std::vector<boid> boids2 = initialise_positions(n);
-
+    ParamBoids param1;
 
     auto ctx = p6::Context{{.title = "Simple-p6-Setup"}};
 
         ctx.imgui                 = [&]() {
         // Show a simple window
         ImGui::Begin("Test");
-        ImGui::SliderInt("nombre de boids", &n, 0, 100);
-
-        ImGui::SliderFloat("visualRange", &param1.visualRange, 0.f, 2.0f);
-        ImGui::SliderFloat("ProtectedRange", &param1.protectedRange, 0.f, 0.5f);
-
-        ImGui::SliderFloat("turnfactor", &param1.turnfactor, 0.f, 0.1f);
-        ImGui::SliderFloat("centeringfactor", &param1.centeringfactor, 0.f, 0.001f);
-        ImGui::SliderFloat("avoidfactor", &param1.avoidfactor, 0.f, 0.1f);
-        ImGui::SliderFloat("matchingfactor", &param1.matchingfactor, 0.f, 0.1f);
-
-        ImGui::SliderFloat("MaxSpeed", &param1.maxspeed, 0.f, 0.05f);
-        ImGui::SliderFloat("MinSpeed", &param1.minspeed, 0.f, 0.05f);
-
-        ImGui::SliderFloat("Size", &param1.boidSize, 0.f, 0.1f);
-
-        //         ImGui::SliderFloat("visualRange", &param2.visualRange, 0.f, 2.0f);
-        // ImGui::SliderFloat("ProtectedRange", &param2.protectedRange, 0.f, 0.5f);
-
-        // ImGui::SliderFloat("turnfactor", &param2.turnfactor, 0.f, 0.1f);
-        // ImGui::SliderFloat("centeringfactor", &param2.centeringfactor, 0.f, 0.001f);
-        // ImGui::SliderFloat("avoidfactor", &param2.avoidfactor, 0.f, 0.1f);
-        // ImGui::SliderFloat("matchingfactor", &param2.matchingfactor, 0.f, 0.1f);
-
-        // ImGui::SliderFloat("MaxSpeed", &param2.maxspeed, 0.f, 0.05f);
-        // ImGui::SliderFloat("MinSpeed", &param2.minspeed, 0.f, 0.05f);
-
-        // ImGui::SliderFloat("Size", &param2.boidSize, 0.f, 0.1f);
+        render_gui(param1);
 
         ImGui::End();
 
@@ -67,17 +65,17 @@ int main(int argc, char* argv[])
         ImGui::ShowDemoWindow();
     };
 
+    std::vector<Boid> boids1 = initialise_positions(param1.numberOfBoids);
     // Declare your infinite update loop.
     ctx.update = [&]() {
         
         ctx.background(p6::NamedColor::Pink);
 
-        draw_boids(boids1, n, ctx, param1);
-        update_position(boids1, n, {}, param1);
+        draw_boids(boids1, ctx, param1);
+        update_position(boids1, {}, param1);
 
-        // draw_boids(boids2, n, ctx, param2);
-        // update_position(boids2, n, {}, param2);
-
+        //Variation du nombre de boids
+        resize(param1, boids1);
     };
         // Should be done last. It starts the infinite loop.
     ctx.start();
