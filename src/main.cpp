@@ -1,10 +1,13 @@
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <vector>
 #include "boid.hpp"
 #include "food.hpp"
 #include "food_helper.hpp"
 #include "imgui.h"
+#include "obstacle.hpp"
+#include "obstacle_helper.hpp"
 #include "p6/p6.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -75,19 +78,25 @@ int main(int argc, char* argv[])
         ImGui::ShowDemoWindow();
     };
 
-    std::vector<Boid> boids1 = initialise_positions(param1.numberOfBoids);
-    std::vector<Food> foods1 = initialise_positions_food(3);
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    int                   randomFoodCount = std::rand() % 6;
+    std::vector<Boid>     boids1          = initialise_positions(param1.numberOfBoids);
+    std::vector<Food>     foods1          = initialise_positions_food(randomFoodCount);
+    std::vector<Obstacle> obstacle1       = initialise_positions_obstacle(1);
     // Declare your infinite update loop.
     ctx.update = [&]() {
         ctx.background(p6::NamedColor::Pink);
 
         draw_boids(boids1, ctx, param1);
         float collisionThreshold = 0.1f; //  seuil de collision
-
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+        int randomFoodCount = std::rand() % 6;
+        ensure_food_existence(foods1, randomFoodCount);
         update_size_food(foods1, boids1, collisionThreshold);
 
-        update_position(boids1, {}, param1, foods1);
+        update_position(boids1, {}, param1, foods1, obstacle1);
         draw_foods(foods1, ctx);
+        draw_obstacle(obstacle1, ctx);
 
         // Variation du nombre de boids
         resize(param1, boids1);

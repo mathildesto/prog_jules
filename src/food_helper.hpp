@@ -7,3 +7,4 @@
 std::vector<Food> initialise_positions_food(int n);
 void              draw_foods(const std::vector<Food>& foods, p6::Context& ctx);
 void              update_size_food(std::vector<Food>& foods, const std::vector<Boid>& boids, float collisionThreshold);
+void              ensure_food_existence(std::vector<Food>& foods, int desiredCount);

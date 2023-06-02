@@ -64,3 +64,10 @@ void update_size_food(std::vector<Food>& foods, const std::vector<Boid>& boids, 
         }
     }
 }
+void ensure_food_existence(std::vector<Food>& foods, int desiredCount)
+{
+    if (foods.empty())
+    {
+        foods = initialise_positions_food(desiredCount);
+    }
+}

@@ -183,6 +183,25 @@ void separation_food(const std::vector<Food>& foods, ParamBoids& param, Boid& bo
     boid.velocity[1] += (close_dy * param.avoidfactor);
 }
 
+void avoid_obstacle(const std::vector<Obstacle>& obstacles, ParamBoids& param, Boid& boid)
+{
+    for (const auto& obstacle : obstacles)
+    {
+        float distance = compute_distance(boid, obstacle);
+
+        // Est-ce que la distance est inférieure à la somme des rayons des boids et de l'obstacle?
+        if (distance < (param.boidSize + obstacle.size))
+        {
+            // Calculer la différence de coordonnées x/y par rapport à l'obstacle
+            float dx = boid.position[0] - obstacle.position[0];
+            float dy = boid.position[1] - obstacle.position[1];
+
+            boid.velocity[0] += (dx * param.avoidfactor); // Ajouter la contribution d'évitement à la vélocité
+            boid.velocity[1] += (dy * param.avoidfactor);
+        }
+    }
+}
+
 std::vector<Boid> initialise_positions(int n)
 {
     // Adds all the boids at a starting position. I put them all at random locations
@@ -195,7 +214,7 @@ std::vector<Boid> initialise_positions(int n)
     return boids;
 }
 
-void update_position(std::vector<Boid>& boids, Window window, ParamBoids& param, const std::vector<Food>& foods)
+void update_position(std::vector<Boid>& boids, Window window, ParamBoids& param, const std::vector<Food>& foods, const std::vector<Obstacle>& obstacles)
 {
     // for each boid
     for (auto& boid : boids)
@@ -207,6 +226,7 @@ void update_position(std::vector<Boid>& boids, Window window, ParamBoids& param,
         separation(boids, param, boid);
         food_attract(boids, foods, param, boid);
         separation_food(foods, param, boid);
+        avoid_obstacle(obstacles, param, boid);
         keep_inside_boundaries(param, window, boid);
 
         limit_speed(param, boid);

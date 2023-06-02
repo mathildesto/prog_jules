@@ -1,5 +1,6 @@
 #pragma once
 #include "food.hpp"
+#include "obstacle.hpp"
 #include "p6/p6.h"
 
 struct Boid {
@@ -75,6 +76,7 @@ void cohesion(std::vector<Boid>& boids, ParamBoids& param, Boid& boid);
 void alignment(std::vector<Boid>& boids, ParamBoids& param, Boid& boid);
 void food_attract(std::vector<Boid>& boids, const std::vector<Food>& foods, ParamBoids& param, Boid& boid);
 void separation_food(const std::vector<Food>& foods, ParamBoids& param, Boid& boid);
-void update_position(std::vector<Boid>& boids, Window window, ParamBoids& param, const std::vector<Food>& foods);
+void avoid_obstacle(const std::vector<Obstacle>& obstacles, ParamBoids& param, Boid& boid);
+void update_position(std::vector<Boid>& boids, Window window, ParamBoids& param, const std::vector<Food>& foods, const std::vector<Obstacle>& obstacle);
 
 void draw_boids(const std::vector<Boid>& boids, p6::Context& ctx, const ParamBoids& param);
