@@ -25,25 +25,42 @@ void draw_foods(const std::vector<Food>& foods, p6::Context& ctx)
 
 void update_size_food(std::vector<Food>& foods, const std::vector<Boid>& boids, float collisionThreshold)
 {
-    const float sizeReductionFactor = 0.2f;
+    const float sizeReductionFactor1 = 0.01f;   // Diminution normale
+    const float sizeReductionFactor2 = 0.0008f; // Diminution réduite
+    const float sizeThreshold        = 0.2f;    // Seuil de taille
 
-    for (auto& food : foods)
+    for (auto it = foods.begin(); it != foods.end();)
     {
-        bool collided = false;
-
         for (const auto& boid : boids)
         {
-            float distance = compute_distance(boid, food);
+            float distance = compute_distance(boid, *it);
             if (distance < collisionThreshold)
             {
-                collided = true;
-                break;
+                if (it->size > sizeThreshold)
+                {
+                    it->size -= sizeReductionFactor1;
+                }
+                else
+                {
+                    it->size -= sizeReductionFactor2;
+                }
             }
         }
 
-        if (collided)
+        std::cout << "Food size: " << it->size << std::endl;
+
+        if (it->size < 0)
         {
-            food.size *= sizeReductionFactor;
+            it = foods.erase(it);
+        }
+        else if (it->size > 0.2) // Si la taille dépasse 1.0, appliquer une diminution plus importante
+        {
+            it->size -= (sizeReductionFactor1 * 10);
+            ++it;
+        }
+        else
+        {
+            ++it;
         }
     }
 }
